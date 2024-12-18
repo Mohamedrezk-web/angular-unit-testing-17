@@ -5,8 +5,19 @@ import { HeroService } from '../hero.service';
 import { of } from 'rxjs';
 import { By } from '@angular/platform-browser';
 import { HeroComponent } from '../hero/hero.component';
-import { NO_ERRORS_SCHEMA } from '@angular/core';
+import { Directive, Input, NO_ERRORS_SCHEMA } from '@angular/core';
 
+@Directive({
+  selector: '[routerLink]',
+  host: { '(click)': 'onClick()' },
+})
+export class RouterLinkDirectiveStub {
+  @Input('routerLink') linkParams: any;
+  navigatedTo: any = null;
+  onClick() {
+    this.navigatedTo = this.linkParams;
+  }
+}
 describe('Heroes Component Deep', () => {
   let fixture: ComponentFixture<HeroesComponent>;
   let mockHeroService;
@@ -27,9 +38,8 @@ describe('Heroes Component Deep', () => {
     ]);
 
     TestBed.configureTestingModule({
-      declarations: [HeroesComponent, HeroComponent],
+      declarations: [HeroesComponent, HeroComponent, RouterLinkDirectiveStub],
       providers: [{ provide: HeroService, useValue: mockHeroService }],
-      schemas: [NO_ERRORS_SCHEMA],
     });
 
     fixture = TestBed.createComponent(HeroesComponent);
@@ -90,5 +100,22 @@ describe('Heroes Component Deep', () => {
       .textContent;
 
     expect(heroesText).toContain(nameToAdd);
+  });
+
+  it('should have the correct route for the first hero', () => {
+    mockHeroService.getHeroes.and.returnValue(of(heroes));
+    fixture.detectChanges();
+
+    const heroComponentsDEs = fixture.debugElement.queryAll(
+      By.directive(HeroComponent)
+    );
+    const firstHero = heroComponentsDEs[0];
+    const routerLink = firstHero
+      .query(By.directive(RouterLinkDirectiveStub))
+      .injector.get(RouterLinkDirectiveStub);
+
+    firstHero.query(By.css('a')).triggerEventHandler('click', null);
+
+    expect(routerLink.navigatedTo).toBe('/detail/1');
   });
 });
